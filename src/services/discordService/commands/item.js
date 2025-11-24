@@ -45,12 +45,14 @@ const generateWeaponEmbed = (itemInfo) => {
     { name: 'Value', value: `${itemInfo.value} credits`, inline: true },
   );
 
-  embed.addFields(
-    {
-      name: 'Salvages Into',
-      value: Object.entries(itemInfo.salvagesInto).map(([itemName, itemCount]) => `- **${stringToTitleCase(itemName.replaceAll('_', ' '))}**: ${itemCount}`).join('\n'),
-    },
-  );
+  if (itemInfo.salvagesInto) {
+    embed.addFields(
+      {
+        name: 'Salvages Into',
+        value: Object.entries(itemInfo.salvagesInto).map(([itemName, itemCount]) => `- **${stringToTitleCase(itemName.replaceAll('_', ' '))}**: ${itemCount}`).join('\n'),
+      },
+    );
+  }
 
   if (itemInfo.upgradeCost) {
     embed.addFields(
@@ -120,7 +122,7 @@ const generateItemEmbed = (itemInfo) => {
     { name: 'Value', value: `${itemInfo.value} credits`, inline: true },
   );
 
-  if (embed.salvagesInto) {
+  if (itemInfo.salvagesInto) {
     embed.addFields(
       {
         name: 'Salvages Into',
