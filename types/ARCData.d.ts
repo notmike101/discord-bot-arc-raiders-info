@@ -1,5 +1,9 @@
 declare global {
   namespace ARCData {
+    interface FullData {
+      items: Record<string, Item | Weapon>;
+    }
+
     interface MultiLanguageString {
       readonly en?: string;
       readonly de?: string;
@@ -18,6 +22,7 @@ declare global {
       readonly kr?: string;
       readonly hr?: string;
       readonly sr?: string;
+      readonly value?: string | number;
     }
 
     interface Item {
@@ -56,6 +61,7 @@ declare global {
       readonly isWeapon: true,
       readonly repairMaterials: Record<string, number | null>;
       readonly craftBench?: Array<string> | string;
+      readonly recipe?: Record<string, number>;
     }
   }
 }

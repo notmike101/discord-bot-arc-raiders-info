@@ -1,6 +1,6 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
-import { DataService } from '../../dataService/index.js';
-import { stringToTitleCase } from '../utils.js';
+import { EmbedBuilder, SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from 'discord.js';
+import { DataService } from '../../dataService/index.ts';
+import { stringToTitleCase } from '../utils.ts';
 
 const dataService = new DataService();
 
@@ -16,23 +16,19 @@ export const data = new SlashCommandBuilder()
     .setAutocomplete(true)
   );
 
-/**
- * 
- * @param {ARCData.Weapon} itemInfo 
- * @returns {EmbedBuilder}
- */
-const generateWeaponEmbed = (itemInfo) => {
+
+const generateWeaponEmbed = (itemInfo: ARCData.Weapon) => {
   const embed = new EmbedBuilder();
 
-  embed.setTitle(itemInfo.name.en);
-  embed.setDescription(itemInfo.description.en);
+  embed.setTitle(itemInfo.name.en ?? '');
+  embed.setDescription(itemInfo.description.en ?? '');
 
   if (itemInfo.imageFilename) {
     embed.setThumbnail(itemInfo.imageFilename);
   }
 
   if (itemInfo.effects) {
-    const effects = Object.entries(itemInfo.effects).map(([name, values]) => ({ name: name, value: values.value.toString(), inline: true }));
+    const effects = Object.entries(itemInfo.effects).map(([name, values]) => ({ name: name, value: values.value?.toString() ?? 'Unknown', inline: true }));
 
     embed.addFields(...effects);
   }
@@ -41,7 +37,6 @@ const generateWeaponEmbed = (itemInfo) => {
     { name: 'Type', value: itemInfo.type, inline: true },
     { name: 'Rarity', value: itemInfo.rarity, inline: true },
     { name: 'Weight', value: `${itemInfo.weightKg} Kg`, inline: true },
-    { name: 'Stack Size', value: itemInfo.stackSize?.toString() ?? '1', inline: true },
     { name: 'Value', value: `${itemInfo.value} credits`, inline: true },
   );
 
@@ -73,7 +68,7 @@ const generateWeaponEmbed = (itemInfo) => {
     embed.addFields(
       {
         name: 'Craftable',
-        value: `Yes - ${stringToTitleCase((typeof itemInfo.craftBench === 'string' ? [itemInfo.craftBench] : itemInfo.craftBench).map((bench) => bench.replaceAll('_', ' ')).join(', '))}`,
+        value: `Yes - ${stringToTitleCase((typeof itemInfo.craftBench! === 'string' ? [itemInfo.craftBench!] : itemInfo.craftBench!).map((bench) => bench.replaceAll('_', ' ')).join(', '))}`,
         inline: true,
       },
       {
@@ -95,21 +90,18 @@ const generateWeaponEmbed = (itemInfo) => {
   return embed;
 };
 
-  /**
-   * @param {ARCData.Item} itemInfo
-   */
-const generateItemEmbed = (itemInfo) => {
+const generateItemEmbed = (itemInfo: ARCData.Item) => {
   const embed = new EmbedBuilder();
 
-  embed.setTitle(itemInfo.name.en);
-  embed.setDescription(itemInfo.description.en);
+  embed.setTitle(itemInfo.name.en ?? '');
+  embed.setDescription(itemInfo.description.en ?? '');
 
   if (itemInfo.imageFilename) {
     embed.setThumbnail(itemInfo.imageFilename);
   }
 
   if (itemInfo.effects) {
-    const effects = Object.entries(itemInfo.effects).map(([name, values]) => ({ name: name, value: values.value.toString(), inline: true }));
+    const effects = Object.entries(itemInfo.effects).map(([name, values]) => ({ name: name, value: values.value?.toString() ?? '', inline: true }));
 
     embed.addFields(...effects);
   }
@@ -157,38 +149,36 @@ const generateItemEmbed = (itemInfo) => {
   return embed;
 };
 
-/**
- * @param {import("discord.js").ChatInputCommandInteraction} interaction 
- */
-export const execute = async (interaction) => {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
   if (dataService.initialized === false) {
     await dataService.initializationPromise;
   }
 
-  /** @type {ARCData.Item | ARCData.Weapon} */
-  const info = await dataService.getInfo('items', interaction.options.getString('identifier'));
-  /** @type {Array<EmbedBuilder>} */
-  const embeds = [];
+  const info = await dataService.getInfo('items', interaction.options.getString('identifier')!);
 
-  if (info.isWeapon !== true) {
-    embeds.push(generateItemEmbed(info));
-  } else if (info.isWeapon === true) {
+  if (!info) return;
+
+  const embeds: Array<EmbedBuilder> = [];
+
+  if ('isWeapon' in info) {
     embeds.push(generateWeaponEmbed(info));
 
     if (info.upgradeCost) {
       for (const upgradeItem of Object.keys(info.upgradeCost)) {
-        const upgradeItemData = await dataService.getInfo('items', upgradeItem.replaceAll('_', ' '));
+        const upgradeItemData = await dataService.getInfo('items', upgradeItem.replaceAll('_', ' ')) as ARCData.Item;
 
         if (upgradeItemData) {
           embeds.push(generateItemEmbed(upgradeItemData));
         }
       }
     }
+  } else {
+    embeds.push(generateItemEmbed(info));
   }
 
   if (info.recipe) {
     for (const recipeItem of Object.keys(info.recipe)) {
-      const recipeItemData = await dataService.getInfo('items', recipeItem.replaceAll('_', ' '));
+      const recipeItemData = await dataService.getInfo('items', recipeItem.replaceAll('_', ' ')) as ARCData.Item;
 
       if (recipeItemData) {
         embeds.push(generateItemEmbed(recipeItemData));
@@ -202,10 +192,7 @@ export const execute = async (interaction) => {
   });
 };
 
-/**
- * @param {import("discord.js").AutocompleteInteraction} interaction 
- */
-export const autocomplete = async (interaction) => {
+export const autocomplete = async (interaction: AutocompleteInteraction) => {
   const focusedValue = interaction.options.getFocused().toLowerCase();
 
   if (focusedValue.length < 2) {

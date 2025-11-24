@@ -1,5 +1,5 @@
 import { loadEnvFile } from 'node:process';
-import { DiscordService } from './src/services/discordService/index.js';
+import { DiscordService } from './src/services/discordService/index.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,6 +16,18 @@ if (!fs.existsSync(process.env.SYNC_TIME_FILE)) {
 if (!fs.existsSync(process.env.DATA_FILE)) {
   fs.writeFileSync(process.env.DATA_FILE, '');
   fs.writeFileSync(process.env.SYNC_TIME_FILE, '0');
+}
+
+if (!process.env.DISCORD_TOKEN) {
+  throw new Error('No discord token provided');
+}
+
+if (!process.env.DISCORD_CLIENT_ID) {
+  throw new Error('No discord client ID provided');
+}
+
+if (!process.env.DISCORD_GUILD_ID) {
+  throw new Error('No discord guild ID provided');
 }
 
 const discordService = new DiscordService({

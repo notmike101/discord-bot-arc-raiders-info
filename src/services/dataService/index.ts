@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 const repoInfo = {
   owner: 'RaidTheory',
@@ -7,11 +6,10 @@ const repoInfo = {
 };
 
 export class DataService {
-  /** @type {Map<string, Map<string, string>>} */
-  #storage = new Map();
+  #storage = new Map<string, Map<string, string>>();
   #initialized = false;
-  #initializedPromise;
-  #initializedResolve;
+  #initializedPromise: Promise<void>;
+  #initializedResolve: (value: void | PromiseLike<void>) => void;
   #lastUpdate = parseInt(fs.readFileSync(process.env.SYNC_TIME_FILE, 'utf8'));
   #syncInterval = 86400 * 1_000; // 24 hours
 
@@ -24,7 +22,7 @@ export class DataService {
   }
 
   constructor() {
-    const { promise, resolve } = Promise.withResolvers();
+    const { promise, resolve } = Promise.withResolvers<void>();
 
     this.#initializedPromise = promise;
     this.#initializedResolve = resolve;
@@ -36,11 +34,11 @@ export class DataService {
     }, this.#syncInterval);
   }
 
-  getList(type) {
-    return [...this.#storage.get(type).keys()];
+  getList(type: string) {
+    return [...this.#storage.get(type)?.keys() ?? []];
   }
 
-  async #apiRequest(path) {
+  async #apiRequest<T>(path: string): Promise<T> {
     const res = await fetch(`https://api.github.com${path}`, {
       headers: {
         'Accept': 'application/vnd.github.object',
@@ -56,10 +54,10 @@ export class DataService {
 
   async refreshData() {
     if (this.#lastUpdate + this.#syncInterval > Date.now()) {
-      this.#loadSavedData('items', this.#storage.get('items'));
+      this.#loadSavedData();
 
     } else {
-      await this.#loadRemoteData('items', this.#storage.get('items'));
+      await this.#loadRemoteData('items');
 
       fs.writeFileSync(process.env.SYNC_TIME_FILE, Date.now().toString());
     }
@@ -68,15 +66,15 @@ export class DataService {
   }
 
   #loadSavedData() {
-    const savedData = JSON.parse(fs.readFileSync(process.env.DATA_FILE, 'utf8'));
+    const savedData = JSON.parse(fs.readFileSync(process.env.DATA_FILE, 'utf8')) as ARCData.FullData;
 
     for (const [key, value] of Object.entries(savedData)) {
       this.#storage.set(key, new Map(Object.entries(value)));
     }
   }
 
-  async #loadRemoteData(type) {
-    const { entries: data } = await this.#apiRequest(`/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${type}`);
+  async #loadRemoteData(type: string) {
+    const { entries: data } = await this.#apiRequest<{ entries: Array<{ name: string }> }>(`/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${type}`);
     const finalizedData = (() => {
       try {
         return JSON.parse(fs.readFileSync(process.env.DATA_FILE, 'utf8'));
@@ -95,14 +93,14 @@ export class DataService {
       finalizedData[type][entryName] = `/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${type}/${entry.name}`;
     }
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       fs.writeFile(process.env.DATA_FILE, JSON.stringify(finalizedData), () => {
         resolve();
       });
     });
   }
 
-  async getInfo(type, identifier) {
+  async getInfo(type: string, identifier: string) {
     await this.#initializedPromise;
 
     const entryName = identifier.toLowerCase();
@@ -111,8 +109,8 @@ export class DataService {
       return null;
     }
 
-    const data = await this.#apiRequest(this.#storage.get(type).get(entryName));
+    const data = await this.#apiRequest<{ content: string }>(this.#storage.get(type)!.get(entryName)!);
 
-    return JSON.parse(atob(data.content));
+    return JSON.parse(atob(data.content)) as ARCData.Weapon | ARCData.Item;
   }
 }

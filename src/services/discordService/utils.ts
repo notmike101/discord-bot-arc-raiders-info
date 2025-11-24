@@ -1,8 +1,4 @@
-/**
- * @param {string} input 
- * @returns {string}
- */
-export const stringToTitleCase = (input) => {
+export const stringToTitleCase = (input: string): string => {
   if (typeof input !== 'string') {
     return input;
   }
