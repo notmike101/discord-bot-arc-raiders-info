@@ -40,9 +40,6 @@ export class DiscordService {
     this.#rest = new REST({ version: '10' }).setToken(this.#token);
 
     this.#client.on(Events.InteractionCreate, this.#handleInteractionCreate.bind(this) as (interaction: Interaction<CacheType>) => void);
-    this.#client.on(Events.ClientReady, () => {
-      console.log('Bot ready...');
-    })
   }
 
   async initialize() {
