@@ -7,7 +7,7 @@ export class MetaforgeService {
 
     constructor() {
         if (process.env.SYNC_INTERVAL !== '0') {
-            setTimeout(() => {
+            setInterval(() => {
                 this.reloadData();
             }, parseInt(process.env.SYNC_INTERVAL));
         }
