@@ -1,7 +1,0 @@
-{
-  "compileOptions": {
-    "module": "ESNext",
-    "target": "ESNext",
-  },
-  "include": ["src/**/*", "types/**/*.d.ts"]
-}
